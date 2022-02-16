@@ -11,8 +11,6 @@
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
 
-
-
 /**
  * "The Register" Taxonomy Class.
  *
@@ -69,15 +67,6 @@ class CiviCRM_Greenregister_TheRegister_CPT_Tax {
 	public $cpt;
 
 	/**
-	 * Taxonomy name.
-	 *
-	 * @since 0.5
-	 * @access public
-	 * @var string $taxonomy_name The name of the Custom Taxonomy.
-	 */
-	public $taxonomy_name;
-
-	/**
 	 * Term Meta key.
 	 *
 	 * @since 0.5
@@ -85,8 +74,6 @@ class CiviCRM_Greenregister_TheRegister_CPT_Tax {
 	 * @var object $term_meta_key The Term Meta key.
 	 */
 	public $term_meta_key = '_cwps_civicrm_optionvalue_id';
-
-
 
 	/**
 	 * Constructor.
@@ -103,9 +90,6 @@ class CiviCRM_Greenregister_TheRegister_CPT_Tax {
 		$this->civicrm = $parent->civicrm;
 		$this->contact = $parent->contact;
 		$this->cpt = $parent;
-
-		// Store Taxonomy name.
-		$this->taxonomy_name = $parent->taxonomy_name;
 
 		// Init when the "The Register" CPT object is loaded.
 		add_action( 'cwps/acf/civicrm/theregister-cpt/loaded', [ $this, 'initialise' ] );
@@ -341,7 +325,7 @@ class CiviCRM_Greenregister_TheRegister_CPT_Tax {
 		];
 
 		// Get what should only be a single Term.
-		$terms = get_terms( $this->taxonomy_name, $args );
+		$terms = get_terms( $taxonomy['name'], $args );
 		if ( empty( $terms ) ) {
 			return false;
 		}

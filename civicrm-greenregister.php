@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name: CiviCRM GreenRegister
+ * Plugin Name: CiviCRM GreenRegister The Register CPT
  * Description: Custom post types and taxonomies for GreenRegister
  * Version: 0.1
  * Author: Matthew Wire
  * Author URI: https://mjw.pt
- * Plugin URI: https://github.com/mjwconsult/civicrm-greenregister
- * Text Domain: civicrm-greenregister
+ * Plugin URI: https://github.com/mjwconsult/civicrm-wp-greenregister
+ * Text Domain: civicrm-wp-greenregister
  * Domain Path: /languages
  * Network: false
  *

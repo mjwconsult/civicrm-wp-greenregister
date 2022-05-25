@@ -122,13 +122,6 @@ class CiviCRM_Greenregister_TheRegister_CPT_Tax {
 		// Add CiviCRM listeners once CiviCRM is available.
 		add_action( 'civicrm_config', [ $this, 'civicrm_config' ], 10, 1 );
 
-		// Create custom filters that mirror 'the_content'.
-		add_filter( 'cwps/acf/civicrm/theregister-cpt/term-desc', 'wptexturize' );
-		add_filter( 'cwps/acf/civicrm/theregister-cpt/term-desc', 'convert_smilies' );
-		add_filter( 'cwps/acf/civicrm/theregister-cpt/term-desc', 'convert_chars' );
-		add_filter( 'cwps/acf/civicrm/theregister-cpt/term-desc', 'wpautop' );
-		add_filter( 'cwps/acf/civicrm/theregister-cpt/term-desc', 'shortcode_unautop' );
-
 	}
 
 

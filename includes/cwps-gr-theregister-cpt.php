@@ -261,12 +261,6 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 		add_action( 'init', [ $this, 'post_type_create' ] );
 		add_action( 'admin_init', [ $this, 'post_type_remove_title' ] );
 
-		// Make sure our feedback is appropriate.
-		add_filter( 'post_updated_messages', [ $this, 'post_type_messages' ] );
-
-		// Make sure our UI text is appropriate.
-		add_filter( 'enter_title_here', [ $this, 'post_type_title' ] );
-
 		// Create Taxonomy.
 		add_action( 'init', [ $this, 'taxonomies_create' ] );
 
@@ -290,8 +284,6 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 		// Remove all CPT listeners.
 		remove_action( 'init', [ $this, 'post_type_create' ] );
 		remove_action( 'admin_init', [ $this, 'post_type_remove_title' ] );
-		remove_filter( 'post_updated_messages', [ $this, 'post_type_messages' ] );
-		remove_filter( 'enter_title_here', [ $this, 'post_type_title' ] );
 		remove_action( 'init', [ $this, 'taxonomies_create' ] );
 		remove_filter( 'wp_terms_checklist_args', [ $this, 'taxonomy_fix_metabox' ] );
 		remove_action( 'restrict_manage_posts', [ $this, 'taxonomy_filter_post_type' ] );

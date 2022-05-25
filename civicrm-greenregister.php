@@ -228,6 +228,7 @@ class CiviCRM_WP_Greenregister {
 	 */
 	public function activate() {
 		$this->initialise();
+		$this->setup_instance();
 		$this->theregister->activate();
 	}
 

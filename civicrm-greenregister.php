@@ -63,7 +63,7 @@ class CiviCRM_WP_Greenregister {
 	 *
 	 * @since 0.1
 	 * @access public
-	 * @var object $theregister The Greenregister utilities object.
+	 * @var CiviCRM_Greenregister_TheRegister_CPT $theregister The Greenregister utilities object.
 	 */
 	public $theregister;
 
@@ -227,7 +227,8 @@ class CiviCRM_WP_Greenregister {
 	 * @since 0.1
 	 */
 	public function activate() {
-
+		$this->initialise();
+		$this->theregister->activate();
 	}
 
 
@@ -238,6 +239,8 @@ class CiviCRM_WP_Greenregister {
 	 * @since 0.1
 	 */
 	public function deactivate() {
+		$this->initialise();
+		$this->theregister->deactivate();
 
 	}
 
@@ -273,3 +276,9 @@ function civicrm_gr() {
 	return $civicrm_wp_greenregister;
 
 }
+
+// Activation.
+register_activation_hook( __FILE__, [ civicrm_gr(), 'activate' ] );
+
+// Deactivation.
+register_deactivation_hook( __FILE__, [ civicrm_gr(), 'deactivate' ] );

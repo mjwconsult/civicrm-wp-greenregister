@@ -171,6 +171,55 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 
 
 	/**
+	 * Actions to perform on plugin activation.
+	 *
+	 * @since 0.1
+	 */
+	public function activate() {
+
+		// Pass through.
+		$this->post_type_create();
+		$this->taxonomies_create();
+
+		// Get current setting data.
+		$data = $this->acf_loader->mapping->setting_get( $this->post_type_name );
+
+		// Only do this once.
+		if ( ! empty( $data['synced'] ) && $data['synced'] === 1 ) {
+			//return;
+		}
+
+		// Sync them.
+		$this->tax->optiongroups_sync_to_terms();
+
+		// Add/Update setting.
+		$data['synced'] = 1;
+
+		// Overwrite setting.
+		$this->acf_loader->mapping->setting_update( $this->post_type_name, $data );
+
+		// Go ahead and flush.
+		flush_rewrite_rules();
+
+	}
+
+
+
+	/**
+	 * Actions to perform on plugin deactivation (NOT deletion).
+	 *
+	 * @since 0.1
+	 */
+	public function deactivate() {
+
+		// Flush rules to reset.
+		flush_rewrite_rules();
+
+	}
+
+
+
+	/**
 	 * Include files.
 	 *
 	 * @since 0.5
@@ -213,8 +262,6 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 
 		// Intercept Post created from Contact events.
 		add_action( 'cwps/acf/post/contact_sync_to_post', [ $this, 'contact_sync_to_post' ], 10 );
-
-		add_action( 'init', [ $this, 'enabled' ] );
 
 	}
 
@@ -293,41 +340,6 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 
 
 	// -------------------------------------------------------------------------
-
-
-
-	/**
-	 * Act when the CPT is enabled via the CiviCRM Event Component settings.
-	 *
-	 * @since 0.5
-	 */
-	public function enabled() {
-
-		// Force Entities to be created.
-		$this->post_type_create();
-		$this->taxonomies_create();
-
-		// Flush so they appear.
-		flush_rewrite_rules();
-
-		// Get current setting data.
-		$data = $this->acf_loader->mapping->setting_get( $this->post_type_name );
-
-		// Only do this once.
-		if ( ! empty( $data['synced'] ) && $data['synced'] === 1 ) {
-			//return;
-		}
-
-		// Sync them.
-		$this->tax->optiongroups_sync_to_terms();
-
-		// Add/Update setting.
-		$data['synced'] = 1;
-
-		// Overwrite setting.
-		$this->acf_loader->mapping->setting_update( $this->post_type_name, $data );
-
-	}
 
 
 

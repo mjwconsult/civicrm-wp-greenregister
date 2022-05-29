@@ -275,8 +275,7 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 	public function register_mapper_hooks() {
 
 		// Listen for events from our Mapper that require Post updates.
-		add_action( 'cwps/acf/mapper/contact/delete/pre', [ $this, 'contact_pre_delete' ], 10 );
-		add_action( 'cwps/acf/mapper/contact/deleted', [ $this, 'contact_deleted' ] );
+		add_action( 'cwps/acf/post_unlinked', [ $this, 'delete_unlinked_post' ] );
 
 	}
 
@@ -290,8 +289,7 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 	public function unregister_mapper_hooks() {
 
 		// Remove all Mapper listeners.
-		remove_action( 'cwps/acf/mapper/contact/created', [ $this, 'contact_created' ] );
-		remove_action( 'cwps/acf/mapper/contact/edited', [ $this, 'contact_edited' ] );
+		remove_action( 'cwps/acf/post_unlinked', [ $this, 'delete_unlinked_post' ] );
 
 	}
 
@@ -382,214 +380,33 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 	}
 
 
-	/**
-	 * A CiviCRM Contact's Instant Messenger Record is about to be deleted.
-	 *
-	 * Before an Instant Messenger Record is deleted, we need to retrieve the
-	 * Instant Messenger Record because the data passed via "civicrm_post" only
-	 *  contains the ID of the Instant Messenger Record.
-	 *
-	 * This is not required when creating or editing an Instant Messenger Record.
-	 *
-	 * @since 0.4
-	 *
-	 * @param array $args The array of CiviCRM params.
-	 */
-	public function contact_pre_delete( $args ) {
-
-		// Always clear properties if set previously.
-		if ( isset( $this->contact_pre ) ) {
-			unset( $this->contact_pre );
-		}
-
-		// We just need the Participant ID.
-		$contact_id = (int) $args['objectId'];
-
-		// Grab the Participant record from the database.
-		$contact_pre = $this->acf_loader->civicrm->contact->get_by_id( $contact_id );
-
-		// Maybe cast previous Participant data as object and stash in a property.
-		if ( ! is_object( $contact_pre ) ) {
-			$this->contact_pre = (object) $contact_pre;
-		} else {
-			$this->contact_pre = $contact_pre;
-		}
-
-	}
-
-
 
 	/**
-	 * Delete a WordPress Post when a CiviCRM Participant has been deleted.
-	 *
-	 * Unusually for this plugin, it is necessary to delete the corresponding
-	 * Post when a Participant (or Event Registration) is deleted in CiviCRM.
-	 * When the CiviCRM record is removed, it makes no sense to keep data for
-	 * historical reasons.
-	 *
-	 * @since 0.5
-	 *
-	 * @param array $args The array of CiviCRM params.
-	 */
-	public function contact_deleted( $args ) {
-
-		// Bail if this is not a Contact.
-		if ( $args['objectName'] != 'Contact' ) {
-			return;
-		}
-
-		// Bail if we don't have a pre-delete Contact record.
-		if ( ! isset( $this->contact_pre ) ) {
-			return;
-		}
-
-		// We just need the Contact ID.
-		$contact_id = (int) $args['objectId'];
-
-		// Sanity check.
-		if ( $contact_id != $this->contact_pre->id ) {
-			return;
-		}
-
-		// Overwrite objectRef.
-		$args['objectRef'] = $this->contact_pre;
-
-		// Bail if this Contact is not mapped.
-		$post_types = $this->acf_loader->civicrm->contact->is_mapped( $args['objectRef'] );
-		if ( $post_types === false ) {
-			return;
-		}
-
-		// Handle each Post Type in turn.
-		foreach ( $post_types as $post_type ) {
-
-			// Find the Post ID of this Post Type that this Contact is synced with.
-			$post_id = false;
-			$post_ids = $this->get_by_contact_id( $args['objectId'], $post_type );
-			if ( ! empty( $post_ids ) ) {
-				$post_id = array_pop( $post_ids );
-			}
-			if ( $post_id === false ) {
-				continue;
-			}
-
-			// Remove WordPress Post callbacks to prevent recursion.
-			$this->acf_loader->mapper->hooks_wordpress_post_remove();
-
-			// Delete the WordPress Post if it exists.
-			$this->delete_from_contact( $post_id );
-
-			// Reinstate WordPress Post callbacks.
-			$this->acf_loader->mapper->hooks_wordpress_post_add();
-
-			// Add our data to the params.
-			$args['post_type'] = $post_type;
-			$args['post_id'] = $post_id;
-
-			/**
-			 * Broadcast that a WordPress Post has been deleted from Contact details.
-			 *
-			 * @since 0.5
-			 *
-			 * @param array $args The array of CiviCRM and discovered params.
-			 */
-			do_action( 'cwps/acf/post/contact/deleted', $args );
-
-		}
-
-	}
-
-
-	/**
-	 * Get the WordPress Post ID(s) for a given CiviCRM Contact ID and Post Type.
-	 *
-	 * If no Post Type is provided then an array of all synced Posts is returned.
-	 *
-	 * @since 0.4
-	 *
-	 * @param integer $contact_id The CiviCRM Contact ID.
-	 * @param string $post_type The WordPress Post Type.
-	 * @return array|bool $posts An array of Post IDs, or false on failure.
-	 */
-	public function get_by_contact_id( $contact_id, $post_type = 'any' ) {
-
-		// Init as failed.
-		$posts = false;
-
-		/*
-		 * Define args for query.
-		 *
-		 * We need to query multiple Post Statuses because we need to keep the
-		 * linkage between the CiviCRM Entity and the Post throughout its
-		 * life cycle, e.g.
-		 *
-		 * * Published: The default status for our purposes.
-		 * * Trash: Because we want to avoid a duplicate Post being created.
-		 * * Draft: When Posts are moved out of the Trash, this is their status.
-		 *
-		 * This may need to be revisited.
-		 */
-		$args = [
-			'post_type' => $post_type,
-			'post_status' => [ 'publish', 'trash', 'draft' ],
-			'no_found_rows' => true,
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-			'meta_key' => '_civicrm_acf_integration_post_contact_id',
-			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
-			'meta_value' => (string) $contact_id,
-			'posts_per_page' => -1,
-			'order' => 'ASC',
-		];
-
-		// Do query.
-		$query = new WP_Query( $args );
-
-		// Do the loop.
-		if ( $query->have_posts() ) {
-			foreach ( $query->get_posts() as $found ) {
-
-				// Add if we want *all* Posts.
-				if ( $post_type === 'any' ) {
-					$posts[] = $found->ID;
-
-					// Grab what should be the only Post.
-				} elseif ( $found->post_type == $post_type ) {
-					$posts[] = $found->ID;
-					break;
-				}
-
-			}
-		}
-
-		// Reset Post data just in case.
-		wp_reset_postdata();
-
-		// --<
-		return $posts;
-
-	}
-
-	/**
-	 * Delete a WordPress "Contact" Post.
+	 * Delete a WordPress Post when a CiviCRM Contact has been deleted.
 	 *
 	 * @since 0.5
 	 *
 	 * @param integer $post_id The numeric ID of the WordPress Post.
-	 * @return WP_Post|bool $post The deleted WordPress Post object, or false on failure.
+	 * @param integer $post_type The WordPress Post Type.
+	 * @param array $args The array of CiviCRM params.
 	 */
-	public function delete_from_contact( $post_id ) {
+	public function delete_unlinked_post( $post_id, $post_type, $args ) {
+
+		// Remove WordPress Post callbacks to prevent recursion.
+		$this->acf_loader->mapper->hooks_wordpress_post_remove();
 
 		// Delete the Post.
 		$post = wp_delete_post( $post_id, true );
+
+		// Reinstate WordPress Post callbacks.
+		$this->acf_loader->mapper->hooks_wordpress_post_add();
 
 		// Bail on failure.
 		if ( is_wp_error( $post ) || empty( $post ) ) {
 			return false;
 		}
 
-		// --<
 		return $post;
-
 	}
 
 

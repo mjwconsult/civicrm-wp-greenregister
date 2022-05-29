@@ -275,7 +275,7 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 	public function register_mapper_hooks() {
 
 		// Listen for events from our Mapper that require Post updates.
-		add_action( 'cwps/acf/post_unlinked', [ $this, 'delete_unlinked_post' ] );
+		add_action( 'cwps/acf/post/unlinked', [ $this, 'delete_unlinked_post' ], 10 , 3 );
 
 	}
 
@@ -289,7 +289,7 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 	public function unregister_mapper_hooks() {
 
 		// Remove all Mapper listeners.
-		remove_action( 'cwps/acf/post_unlinked', [ $this, 'delete_unlinked_post' ] );
+		remove_action( 'cwps/acf/post/unlinked', [ $this, 'delete_unlinked_post' ] );
 
 	}
 

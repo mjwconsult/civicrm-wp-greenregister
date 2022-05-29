@@ -275,8 +275,6 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 	public function register_mapper_hooks() {
 
 		// Listen for events from our Mapper that require Post updates.
-		add_action( 'cwps/acf/mapper/contact/created', [ $this, 'contact_created' ] );
-		add_action( 'cwps/acf/mapper/contact/edited', [ $this, 'contact_edited' ] );
 
 	}
 
@@ -497,146 +495,6 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 
 
 	/**
-	 * Create a WordPress Post when a CiviCRM Contact has been created.
-	 *
-	 * @since 0.5
-	 *
-	 * @param array $args The array of CiviCRM params.
-	 */
-	public function contact_created( $args ) {
-
-		// Bail if this is not a Contact.
-		if ( $args['objectName'] != 'Contact' ) {
-			return;
-		}
-
-		// Get originating Entity.
-		$entity = $this->acf_loader->mapper->entity_get();
-
-		/*
-		 * Exclude "reverse" create procedure when a WordPress Post is the
-		 * originating Entity and the Post Type matches.
-		 *
-		 * This is because - although there isn't a Post ID yet - there
-		 * cannot be more than one Post of a particular Post Type per Contact.
-		 *
-		 * Instead, the Contact ID needs to be reverse synced to the Post.
-		 */
-		if ( $entity['entity'] === 'post' && $this->post_type_name == $entity['type'] ) {
-
-			// Save correspondence and skip.
-			$this->acf_loader->post->contact_id_set( $entity['id'], $args['objectId'] );
-			return;
-
-		}
-
-		// Find the Post ID of this Post Type that this Contact is synced with.
-		$post_id = false;
-		$post_ids = $this->acf_loader->post->get_by_contact_id( $args['objectId'], $this->post_type_name );
-		if ( ! empty( $post_ids ) ) {
-			$post_id = array_pop( $post_ids );
-		}
-
-		// Remove WordPress Post callbacks to prevent recursion.
-		$this->acf_loader->mapper->hooks_wordpress_post_remove();
-
-		// Create the WordPress Post.
-		if ( $post_id === false ) {
-			$post_id = $this->acf_loader->post->create_from_contact( $args['objectRef'], $this->post_type_name );
-		}
-
-		// Reinstate WordPress Post callbacks.
-		$this->acf_loader->mapper->hooks_wordpress_post_add();
-
-		// Add our data to the params.
-		$args['post_type'] = $this->post_type_name;
-		$args['post_id'] = $post_id;
-
-		/**
-		 * Broadcast that a WordPress Post has been updated from Contact details.
-		 *
-		 * Used internally to:
-		 *
-		 * - Update the ACF Fields for the WordPress Post
-		 *
-		 * @since 0.5
-		 *
-		 * @param array $args The array of CiviCRM and discovered params.
-		 */
-		do_action( 'cwps/acf/post/contact/created', $args );
-
-	}
-
-
-
-	/**
-	 * Update a WordPress Post when a CiviCRM Contact has been updated.
-	 *
-	 * @since 0.5
-	 *
-	 * @param array $args The array of CiviCRM params.
-	 */
-	public function contact_edited( $args ) {
-
-		// Bail if this is not a Contact.
-		if ( $args['objectName'] != 'Contact' ) {
-			return;
-		}
-
-		// Find the Post ID of this Post Type that this Contact is synced with.
-		$post_id = false;
-		$post_ids = $this->acf_loader->post->get_by_contact_id( $args['objectId'], $this->post_type_name );
-		if ( ! empty( $post_ids ) ) {
-			$post_id = array_pop( $post_ids );
-		}
-
-		// Get originating Entity.
-		$entity = $this->acf_loader->mapper->entity_get();
-
-		// Exclude "reverse" edits when a Post is the originator.
-		if ( $entity['entity'] === 'post' && $post_id == $entity['id'] ) {
-			return;
-		}
-
-		// Remove WordPress Post callbacks to prevent recursion.
-		$this->acf_loader->mapper->hooks_wordpress_post_remove();
-
-		// Create the WordPress Post if it doesn't exist, otherwise update.
-		if ( $post_id === false ) {
-			$post_id = $this->acf_loader->post->create_from_contact( $args['objectRef'], $this->post_type_name );
-		} else {
-			$this->acf_loader->post->update_from_contact( $args['objectRef'], $post_id );
-		}
-
-		// Reinstate WordPress Post callbacks.
-		$this->acf_loader->mapper->hooks_wordpress_post_add();
-
-		// Add our data to the params.
-		$args['post_type'] = $this->post_type_name;
-		$args['post_id'] = $post_id;
-
-		/**
-		 * Broadcast that a WordPress Post has been updated from Contact details.
-		 *
-		 * Used internally to:
-		 *
-		 * - Update the ACF Fields for the WordPress Post
-		 *
-		 * @since 0.5
-		 *
-		 * @param array $args The array of CiviCRM and discovered params.
-		 */
-		do_action( 'cwps/acf/post/contact/edited', $args );
-
-	}
-
-
-
-	// -------------------------------------------------------------------------
-
-
-
-	/**
 	 * Create our Custom Post Type.
 	 *
 	 * @since 0.5
@@ -655,7 +513,7 @@ class CiviCRM_Greenregister_TheRegister_CPT {
 
 				'labels' => [
 					'name' => __( 'The Register', 'civicrm-wp-greenregister' ),
-					'singular_name' => __( 'Company', 'civicrm-wp-greenregister' )
+					'singular_name' => __( 'The Register', 'civicrm-wp-greenregister' )
 				],
 				'public' => true,
 				'has_archive' => true,
